@@ -43,30 +43,11 @@ def decode_file(path: str | Path) -> tuple[str, str]:
     return text, encoding
 
 
-def _line_matches_label(line: str, label: str) -> bool:
-    if line == label:
-        return True
-    return line.startswith(f"{label} ") or line.startswith(f"{label}:")
-
-
-def _extract_fields(block_text: str) -> dict[str, str]:
-    values: dict[str, str] = {attr_name: NOT_FOUND_IN_BLOCK for attr_name in FIELD_LABELS.values()}
-    lines = [line.rstrip("\r") for line in block_text.split("\n")]
-
-    for index, line in enumerate(lines):
-        for label, attr_name in FIELD_LABELS.items():
-            if values[attr_name] != NOT_FOUND_IN_BLOCK:
-                continue
-            if not _line_matches_label(line, label):
-                continue
-
-            # Preserve full original line where possible; support layout where value is on next line.
-            if line == label and index + 1 < len(lines) and lines[index + 1].strip():
-                values[attr_name] = f"{label} {lines[index + 1]}"
-            else:
-                values[attr_name] = line
-
-    return values
+def _extract_line(block_text: str, label: str) -> str:
+    for line in block_text.splitlines():
+        if line.startswith(label):
+            return line.rstrip("\n")
+    return NOT_FOUND_IN_BLOCK
 
 
 def parse_num_blocks(text: str) -> list[NumBlock]:
@@ -77,7 +58,9 @@ def parse_num_blocks(text: str) -> list[NumBlock]:
         object_number = f"NUM{object_match.group(1)}" if object_match else NOT_FOUND_IN_BLOCK
         reconstructed_block = DELIMITER + part
 
-        values = _extract_fields(reconstructed_block)
+        values: dict[str, str] = {}
+        for label, attr_name in FIELD_LABELS.items():
+            values[attr_name] = _extract_line(reconstructed_block, label)
 
         blocks.append(
             NumBlock(
@@ -141,7 +124,14 @@ def lookup_addresses(
 
     for requested in requested_addresses:
         search_variants = [f"Address ETHERNET:{requested}", f"Address {requested}"]
-        match_in_block = next((block for block in num_blocks if block.address_line in search_variants), None)
+        match_in_block = next(
+            (
+                block
+                for block in num_blocks
+                if block.address_line in search_variants
+            ),
+            None,
+        )
 
         if match_in_block is not None:
             rows.append(
