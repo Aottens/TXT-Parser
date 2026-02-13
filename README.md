@@ -1,10 +1,12 @@
 # TXT-Parser
 
-Desktop GUI tool (PyQt6) voor deterministische parsing van `Numeral Display & Input[NUMxxxx` blokken in `.txt` bestanden.
+Desktop GUI tool (PyQt6) voor deterministische parsing van `Numeral Display & Input[NUMxxxx` blokken in `.txt` en `.rtf` bestanden.
 
 ## Features
 
 - Exacte split op `Numeral Display & Input[NUM`
+- Ondersteunt directe inlees van `.rtf` (RTF wordt naar platte tekst geconverteerd)
+- Normaliseert literal escaped newlines (`\n`) wanneer deze in geconverteerde tekst voorkomen
 - Extractie van vaste regels met `startswith` matching
 - Diagnostics: aantal blokken, numerieke sortering, missende nummers, dubbele Address-regels
 - Address lookup met classificatie:

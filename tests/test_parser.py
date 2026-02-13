@@ -1,7 +1,9 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 from txt_parser.models import FOUND_OUTSIDE_NUM_BLOCK, NOT_FOUND_IN_BLOCK, NOT_FOUND_IN_FILE
-from txt_parser.parser import build_diagnostics, lookup_addresses, num_blocks_debug_report, parse_num_blocks, rows_to_markdown
+from txt_parser.parser import build_diagnostics, decode_file, lookup_addresses, num_blocks_debug_report, parse_num_blocks, rows_to_markdown
 
 
 SAMPLE_TEXT = """Header
@@ -114,6 +116,26 @@ ON
         self.assertIn("### Block 1: NUM0001", report)
         self.assertIn("Address: Address 100", report)
         self.assertIn("UnitScale: UnitScale A", report)
+
+
+    def test_decode_file_normalizes_escaped_newlines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sample.txt"
+            path.write_text("Numeral Display & Input[NUM0001\\nAddress\\n100", encoding="utf-8")
+            text, source = decode_file(path)
+            self.assertIn("escaped-newline-normalization", source)
+            block = parse_num_blocks(text)[0]
+            self.assertEqual("Address 100", block.address_line)
+
+    def test_decode_file_rtf(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sample.rtf"
+            path.write_text(r"{\rtf1\ansi Numeral Display & Input[NUM0002\par Address\par ETHERNET:ABC}", encoding="utf-8")
+            text, source = decode_file(path)
+            self.assertTrue(source.startswith("rtf->"))
+            block = parse_num_blocks(text)[0]
+            self.assertEqual("NUM0002", block.object_number)
+            self.assertEqual("Address ETHERNET:ABC", block.address_line)
 
 
 

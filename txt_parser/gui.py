@@ -168,7 +168,7 @@ class NumParserWindow(QMainWindow):
         self.tabs.addTab(tab, "Debug")
 
     def open_file(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open TXT file", "", "Text Files (*.txt);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "Open input file", "", "Supported Files (*.txt *.rtf);;Text Files (*.txt);;RTF Files (*.rtf);;All Files (*)")
         if not path:
             return
         self.file_path = path

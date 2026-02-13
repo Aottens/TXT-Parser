@@ -31,16 +31,46 @@ class ParseDiagnostics:
     duplicate_addresses: dict[str, list[str]]
 
 
-def decode_file(path: str | Path) -> tuple[str, str]:
-    raw = Path(path).read_bytes()
+def _rtf_to_text(rtf: str) -> str:
+    text = rtf.replace("\\par", "\n")
+    text = re.sub(r"\\[a-zA-Z]+-?\d* ?", "", text)
+    text = text.replace("{", "").replace("}", "")
+    text = text.replace("\\~", " ").replace("\\tab", "\t")
+    return text
+
+
+def _decode_bytes(raw: bytes) -> tuple[str, str]:
     try:
-        text = raw.decode("utf-8")
-        encoding = "utf-8"
+        return raw.decode("utf-8"), "utf-8"
     except UnicodeDecodeError:
-        text = raw.decode("latin-1")
-        encoding = "latin-1 (fallback)"
-    logger.info("decoded %s with %s", path, encoding)
-    return text, encoding
+        return raw.decode("latin-1"), "latin-1 (fallback)"
+
+
+def _normalize_escaped_newlines(text: str) -> tuple[str, bool]:
+    if "\\n" in text and "\n" not in text:
+        normalized = text.replace("\\r\\n", "\n").replace("\\n", "\n")
+        return normalized, True
+    return text, False
+
+
+def decode_file(path: str | Path) -> tuple[str, str]:
+    file_path = Path(path)
+    raw = file_path.read_bytes()
+    decoded_text, encoding = _decode_bytes(raw)
+
+    if file_path.suffix.lower() == ".rtf":
+        text = _rtf_to_text(decoded_text)
+        source = f"rtf->{encoding}"
+    else:
+        text = decoded_text
+        source = encoding
+
+    text, normalized = _normalize_escaped_newlines(text)
+    if normalized:
+        source = f"{source} + escaped-newline-normalization"
+
+    logger.info("decoded %s with %s", path, source)
+    return text, source
 
 
 def _line_matches_label(line: str, label: str) -> bool:
@@ -64,7 +94,6 @@ def _extract_fields(block_text: str) -> dict[str, str]:
                 continue
 
             normalized_line = line.lstrip()
-            # Preserve full original line where possible; support layout where value is on next line.
             if normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
                 values[attr_name] = f"{matched_label} {lines[index + 1].strip()}"
             else:
@@ -191,7 +220,6 @@ def lookup_addresses(
             )
 
     return rows
-
 
 
 def num_blocks_debug_report(num_blocks: list[NumBlock]) -> str:
