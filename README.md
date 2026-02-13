@@ -7,6 +7,8 @@ Desktop GUI tool (PyQt6) voor deterministische parsing van `Numeral Display & In
 - Exacte split op `Numeral Display & Input[NUM`
 - Ondersteunt directe inlees van `.rtf` (RTF wordt naar platte tekst geconverteerd)
 - Normaliseert literal escaped newlines (`\n`) wanneer deze in geconverteerde tekst voorkomen
+- Section-aware extractie (voorkeur voor relevante secties zoals `General` en `Input Max/Min`)
+- RTF decode via `striprtf` indien beschikbaar, met ingebouwde fallback parser
 - Extractie van vaste regels met `startswith` matching
 - Diagnostics: aantal blokken, numerieke sortering, missende nummers, dubbele Address-regels
 - Address lookup met classificatie:

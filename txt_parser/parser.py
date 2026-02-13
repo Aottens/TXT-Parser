@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 DELIMITER = "Numeral Display & Input[NUM"
 OBJECT_NUMBER_RE = re.compile(r"^(\d{4})")
+HEX_ESCAPE_RE = re.compile(r"\\'([0-9a-fA-F]{2})")
+
 FIELD_LABELS = {
     "Address": ("address_line", ("Address",)),
     "UnitScale": ("unitscale_line", ("UnitScale", "Set UnitScale")),
@@ -20,6 +22,15 @@ FIELD_LABELS = {
     "Minimum Input Limit": ("min_input_limit_line", ("Minimum Input Limit",)),
     "Maximum Input Limit": ("max_input_limit_line", ("Maximum Input Limit",)),
     "Timing of max/min range check": ("timing_range_check_line", ("Timing of max/min range check",)),
+}
+
+PREFERRED_SECTION_BY_FIELD = {
+    "address_line": "General",
+    "unitscale_line": "General",
+    "storage_type_line": "General",
+    "timing_range_check_line": "General",
+    "min_input_limit_line": "Input Max/Min",
+    "max_input_limit_line": "Input Max/Min",
 }
 
 
@@ -31,8 +42,14 @@ class ParseDiagnostics:
     duplicate_addresses: dict[str, list[str]]
 
 
-def _rtf_to_text(rtf: str) -> str:
-    text = rtf.replace("\\par", "\n")
+def _decode_hex_escapes(text: str) -> str:
+    return HEX_ESCAPE_RE.sub(lambda m: bytes.fromhex(m.group(1)).decode("latin-1"), text)
+
+
+def _fallback_rtf_to_text(rtf: str) -> str:
+    text = _decode_hex_escapes(rtf)
+    text = text.replace("\\par", "\n").replace("\\line", "\n")
+    text = re.sub(r"\\u-?\d+\??", "", text)
     text = re.sub(r"\\[a-zA-Z]+-?\d* ?", "", text)
     text = text.replace("{", "").replace("}", "")
     text = text.replace("\\~", " ").replace("\\tab", "\t")
@@ -47,10 +64,17 @@ def _decode_bytes(raw: bytes) -> tuple[str, str]:
 
 
 def _normalize_escaped_newlines(text: str) -> tuple[str, bool]:
-    if "\\n" in text and "\n" not in text:
-        normalized = text.replace("\\r\\n", "\n").replace("\\n", "\n")
-        return normalized, True
-    return text, False
+    normalized = text.replace("\\r\\n", "\n").replace("\\n", "\n")
+    return normalized, normalized != text
+
+
+def _decode_rtf_to_text(decoded_text: str) -> tuple[str, str]:
+    try:
+        from striprtf.striprtf import rtf_to_text  # type: ignore
+
+        return rtf_to_text(decoded_text), "rtf(striprtf)"
+    except Exception:
+        return _fallback_rtf_to_text(decoded_text), "rtf(fallback)"
 
 
 def decode_file(path: str | Path) -> tuple[str, str]:
@@ -59,8 +83,8 @@ def decode_file(path: str | Path) -> tuple[str, str]:
     decoded_text, encoding = _decode_bytes(raw)
 
     if file_path.suffix.lower() == ".rtf":
-        text = _rtf_to_text(decoded_text)
-        source = f"rtf->{encoding}"
+        text, decoder = _decode_rtf_to_text(decoded_text)
+        source = f"{decoder}->{encoding}"
     else:
         text = decoded_text
         source = encoding
@@ -80,24 +104,45 @@ def _line_matches_label(line: str, label: str) -> bool:
     return normalized_line.startswith(f"{label} ") or normalized_line.startswith(f"{label}:")
 
 
+def _candidate_score(attr_name: str, section: str, line: str, value: str) -> int:
+    score = 0
+    if section == PREFERRED_SECTION_BY_FIELD.get(attr_name):
+        score += 100
+    if not line.startswith(" "):
+        score += 20
+    if value and value != NOT_FOUND_IN_BLOCK:
+        score += 10
+    if attr_name == "address_line" and (":" in value or "." in value):
+        score += 10
+    return score
+
+
 def _extract_fields(block_text: str) -> dict[str, str]:
     values: dict[str, str] = {meta[0]: NOT_FOUND_IN_BLOCK for meta in FIELD_LABELS.values()}
+    scores: dict[str, int] = {meta[0]: -1 for meta in FIELD_LABELS.values()}
     lines = [line.rstrip("\r") for line in block_text.split("\n")]
+    current_section = ""
 
     for index, line in enumerate(lines):
-        for _canonical_label, (attr_name, accepted_labels) in FIELD_LABELS.items():
-            if values[attr_name] != NOT_FOUND_IN_BLOCK:
-                continue
+        stripped = line.strip()
+        if stripped and line == stripped and stripped in {"General", "Input Max/Min", "Control Flag", "Text", "Frame", "Flicker"}:
+            current_section = stripped
 
+        for _canonical_label, (attr_name, accepted_labels) in FIELD_LABELS.items():
             matched_label = next((label for label in accepted_labels if _line_matches_label(line, label)), None)
             if matched_label is None:
                 continue
 
             normalized_line = line.lstrip()
             if normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
-                values[attr_name] = f"{matched_label} {lines[index + 1].strip()}"
+                value = f"{matched_label} {lines[index + 1].strip()}"
             else:
-                values[attr_name] = normalized_line
+                value = normalized_line
+
+            score = _candidate_score(attr_name, current_section, line, value)
+            if score > scores[attr_name]:
+                scores[attr_name] = score
+                values[attr_name] = value
 
     return values
 

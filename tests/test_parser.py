@@ -132,10 +132,28 @@ ON
             path = Path(tmp) / "sample.rtf"
             path.write_text(r"{\rtf1\ansi Numeral Display & Input[NUM0002\par Address\par ETHERNET:ABC}", encoding="utf-8")
             text, source = decode_file(path)
-            self.assertTrue(source.startswith("rtf->"))
+            self.assertTrue(source.startswith("rtf("))
             block = parse_num_blocks(text)[0]
             self.assertEqual("NUM0002", block.object_number)
             self.assertEqual("Address ETHERNET:ABC", block.address_line)
+
+
+    def test_prefers_general_address_over_other_sections(self):
+        text = """Numeral Display & Input[NUM0011]
+General
+Address
+ETHERNET:MAIN.VALUE
+Flicker
+   Address
+
+Input Max/Min
+   Minimum Input Limit
+1
+   Maximum Input Limit
+9
+"""
+        block = parse_num_blocks(text)[0]
+        self.assertEqual("Address ETHERNET:MAIN.VALUE", block.address_line)
 
 
 
