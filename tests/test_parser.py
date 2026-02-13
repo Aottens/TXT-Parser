@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from txt_parser.models import FOUND_OUTSIDE_NUM_BLOCK, NOT_FOUND_IN_BLOCK, NOT_FOUND_IN_FILE
-from txt_parser.parser import build_diagnostics, decode_file, lookup_addresses, num_blocks_debug_report, parse_num_blocks, rows_to_markdown
+from txt_parser.parser import build_diagnostics, decode_file, lookup_addresses, num_blocks_debug_report, parse_num_blocks, rows_to_markdown, rows_to_tsv
 
 
 SAMPLE_TEXT = """Header
@@ -174,6 +174,14 @@ Input Max/Min
         self.assertEqual("REAL(Real Number 2 words)", block.storage_type_line)
         self.assertEqual("10", block.max_input_limit_line)
         self.assertEqual("0", block.min_input_limit_line)
+
+
+    def test_tsv_shape(self):
+        blocks = parse_num_blocks(SAMPLE_TEXT)
+        rows = lookup_addresses(blocks, SAMPLE_TEXT, ["100"])
+        tsv = rows_to_tsv(rows)
+        self.assertTrue(tsv.startswith("Gevraagd Address	Objectnummer	Address in file"))
+        self.assertIn("100	NUM0001	100", tsv)
 
 
 

@@ -327,6 +327,36 @@ def num_blocks_debug_report(num_blocks: list[NumBlock]) -> str:
     return "\n".join(lines)
 
 
+
+def rows_to_tsv(rows: list[LookupRow]) -> str:
+    headers = [
+        "Gevraagd Address",
+        "Objectnummer",
+        "Address in file",
+        "UnitScale",
+        "Storage Type",
+        "Minimum Input Limit",
+        "Maximum Input Limit",
+        "Timing of max/min range check",
+    ]
+    lines = ["\t".join(headers)]
+    for row in rows:
+        lines.append(
+            "\t".join(
+                [
+                    row.requested_address,
+                    row.object_number,
+                    row.address_in_file,
+                    row.unitscale,
+                    row.storage_type,
+                    row.min_input_limit,
+                    row.max_input_limit,
+                    row.timing_range_check,
+                ]
+            )
+        )
+    return "\n".join(lines)
+
 def rows_to_markdown(rows: list[LookupRow]) -> str:
     headers = [
         "Gevraagd Address",

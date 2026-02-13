@@ -30,6 +30,7 @@ from .parser import (
     num_blocks_debug_report,
     parse_num_blocks,
     rows_to_markdown,
+    rows_to_tsv,
 )
 
 logger = logging.getLogger(__name__)
@@ -123,8 +124,8 @@ class NumParserWindow(QMainWindow):
         )
 
         actions = QHBoxLayout()
-        copy_button = QPushButton("Copy Markdown")
-        copy_button.clicked.connect(self.copy_markdown)
+        copy_button = QPushButton("Copy for Excel")
+        copy_button.clicked.connect(self.copy_for_excel)
         save_button = QPushButton("Save .md")
         save_button.clicked.connect(self.save_markdown)
         actions.addWidget(copy_button)
@@ -238,10 +239,10 @@ class NumParserWindow(QMainWindow):
                 table_item.setFlags(table_item.flags() ^ Qt.ItemFlag.ItemIsEditable)
                 self.lookup_table.setItem(row, col, table_item)
 
-    def copy_markdown(self) -> None:
-        markdown = rows_to_markdown(self.lookup_rows)
-        QApplication.clipboard().setText(markdown)
-        self.statusBar().showMessage("Markdown copied to clipboard")
+    def copy_for_excel(self) -> None:
+        tsv = rows_to_tsv(self.lookup_rows)
+        QApplication.clipboard().setText(tsv)
+        self.statusBar().showMessage("Excel data copied to clipboard")
 
     def save_markdown(self) -> None:
         markdown = rows_to_markdown(self.lookup_rows)
