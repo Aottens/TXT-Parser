@@ -97,11 +97,35 @@ def decode_file(path: str | Path) -> tuple[str, str]:
     return text, source
 
 
+def _split_pipe_row(line: str) -> tuple[str, str] | None:
+    normalized = line.lstrip()
+    if "|" not in normalized:
+        return None
+    parts = normalized.split("|")
+    if not parts:
+        return None
+    label = parts[0].strip()
+    value = parts[1].strip() if len(parts) > 1 else ""
+    return label, value
+
+
 def _line_matches_label(line: str, label: str) -> bool:
     normalized_line = line.lstrip()
+    pipe = _split_pipe_row(normalized_line)
+    if pipe is not None:
+        return pipe[0] == label
+
     if normalized_line == label:
         return True
-    return normalized_line.startswith(f"{label} ") or normalized_line.startswith(f"{label}:")
+    if normalized_line.startswith(f"{label}:"):
+        return True
+    if normalized_line.startswith(f"{label} "):
+        # avoid false positives such as "Address for ..."
+        candidate_value = normalized_line[len(label) + 1 :].strip()
+        if label == "Address":
+            return not candidate_value.lower().startswith("for ")
+        return True
+    return False
 
 
 def _candidate_score(attr_name: str, section: str, line: str, value: str) -> int:
@@ -134,7 +158,10 @@ def _extract_fields(block_text: str) -> dict[str, str]:
                 continue
 
             normalized_line = line.lstrip()
-            if normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
+            pipe = _split_pipe_row(normalized_line)
+            if pipe is not None and pipe[0] == matched_label:
+                value = f"{matched_label} {pipe[1]}" if pipe[1] else matched_label
+            elif normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
                 value = f"{matched_label} {lines[index + 1].strip()}"
             else:
                 value = normalized_line

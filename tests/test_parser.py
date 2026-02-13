@@ -156,6 +156,26 @@ Input Max/Min
         self.assertEqual("Address ETHERNET:MAIN.VALUE", block.address_line)
 
 
+    def test_pipe_delimited_rows_extract_correct_values(self):
+        text = """Numeral Display & Input[NUM0010]
+General
+Storage Type|REAL(Real Number 2 words)|
+Set UnitScale|1000|
+Timing of max/min range check|Check Value after Scale Conversion|
+Address|ETHERNET:VUA.IJ.Buffer_afstand|
+Address for Selecting a Line||
+Input Max/Min
+   Maximum Input Limit|10|
+   Minimum Input Limit|0|
+"""
+        block = parse_num_blocks(text)[0]
+        self.assertEqual("Address ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
+        self.assertEqual("Set UnitScale 1000", block.unitscale_line)
+        self.assertEqual("Storage Type REAL(Real Number 2 words)", block.storage_type_line)
+        self.assertEqual("Maximum Input Limit 10", block.max_input_limit_line)
+        self.assertEqual("Minimum Input Limit 0", block.min_input_limit_line)
+
+
 
 if __name__ == "__main__":
     unittest.main()
