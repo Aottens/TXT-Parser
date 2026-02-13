@@ -25,3 +25,22 @@ python main.py
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+
+## PR zichtbaar maken (troubleshooting)
+
+Als je een PR niet ziet na een commit vanuit Codex, controleer:
+
+```bash
+git branch -vv
+git remote -v
+git log --oneline -n 5
+```
+
+Push daarna expliciet de branch waarop de commit staat:
+
+```bash
+git push -u origin work
+```
+
+Maak vervolgens de PR vanaf `work` naar je doelbranch (bijv. `main`).

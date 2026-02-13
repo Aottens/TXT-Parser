@@ -59,5 +59,26 @@ class ParserTests(unittest.TestCase):
         self.assertIn("| 100 | NUM0001 | Address 100 |", markdown)
 
 
+    def test_extracts_next_line_value_layout(self):
+        text = """Numeral Display & Input[NUM0007
+Address
+300
+UnitScale
+X
+Storage Type
+Y
+Minimum Input Limit
+0
+Maximum Input Limit
+9
+Timing of max/min range check
+Z
+"""
+        block = parse_num_blocks(text)[0]
+        self.assertEqual("Address 300", block.address_line)
+        self.assertEqual("UnitScale X", block.unitscale_line)
+        self.assertEqual("Storage Type Y", block.storage_type_line)
+
+
 if __name__ == "__main__":
     unittest.main()
