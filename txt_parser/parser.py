@@ -109,6 +109,19 @@ def _split_pipe_row(line: str) -> tuple[str, str] | None:
     return label, value
 
 
+
+
+def _extract_value_from_labeled_line(line: str, label: str) -> str:
+    normalized = line.lstrip()
+    pipe = _split_pipe_row(normalized)
+    if pipe is not None and pipe[0] == label:
+        return pipe[1]
+    if normalized.startswith(f"{label}:"):
+        return normalized[len(label) + 1 :].strip()
+    if normalized.startswith(f"{label} "):
+        return normalized[len(label) + 1 :].strip()
+    return normalized
+
 def _line_matches_label(line: str, label: str) -> bool:
     normalized_line = line.lstrip()
     pipe = _split_pipe_row(normalized_line)
@@ -158,13 +171,10 @@ def _extract_fields(block_text: str) -> dict[str, str]:
                 continue
 
             normalized_line = line.lstrip()
-            pipe = _split_pipe_row(normalized_line)
-            if pipe is not None and pipe[0] == matched_label:
-                value = f"{matched_label} {pipe[1]}" if pipe[1] else matched_label
-            elif normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
-                value = f"{matched_label} {lines[index + 1].strip()}"
+            if normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
+                value = lines[index + 1].strip()
             else:
-                value = normalized_line
+                value = _extract_value_from_labeled_line(normalized_line, matched_label)
 
             score = _candidate_score(attr_name, current_section, line, value)
             if score > scores[attr_name]:
@@ -245,8 +255,15 @@ def lookup_addresses(
     rows: list[LookupRow] = []
 
     for requested in requested_addresses:
-        search_variants = [f"Address ETHERNET:{requested}", f"Address {requested}"]
-        match_in_block = next((block for block in num_blocks if block.address_line in search_variants), None)
+        requested_norm = requested.strip()
+        requested_variants = {
+            requested_norm,
+            f"ETHERNET:{requested_norm}",
+            requested_norm.replace("ETHERNET:", "", 1),
+        }
+
+        match_in_block = next((block for block in num_blocks if block.address_line in requested_variants), None)
+        search_variants = [f"Address ETHERNET:{requested_norm}", f"Address {requested_norm}"]
 
         if match_in_block is not None:
             rows.append(

@@ -30,8 +30,8 @@ class ParserTests(unittest.TestCase):
         blocks = parse_num_blocks(SAMPLE_TEXT)
         self.assertEqual(2, len(blocks))
         self.assertEqual("NUM0001", blocks[0].object_number)
-        self.assertEqual("Address 100", blocks[0].address_line)
-        self.assertEqual("UnitScale D", blocks[1].unitscale_line)
+        self.assertEqual("100", blocks[0].address_line)
+        self.assertEqual("D", blocks[1].unitscale_line)
 
     def test_diagnostics(self):
         diagnostics = build_diagnostics(parse_num_blocks(SAMPLE_TEXT))
@@ -44,7 +44,7 @@ class ParserTests(unittest.TestCase):
         rows = lookup_addresses(blocks, SAMPLE_TEXT, ["100", "777", "404"])
 
         self.assertEqual("NUM0001", rows[0].object_number)
-        self.assertEqual("Address 100", rows[0].address_in_file)
+        self.assertEqual("100", rows[0].address_in_file)
 
         self.assertEqual(FOUND_OUTSIDE_NUM_BLOCK, rows[1].object_number)
         self.assertEqual("Address 777", rows[1].address_in_file)
@@ -58,7 +58,7 @@ class ParserTests(unittest.TestCase):
         rows = lookup_addresses(blocks, SAMPLE_TEXT, ["100"])
         markdown = rows_to_markdown(rows)
         self.assertTrue(markdown.startswith("| Gevraagd Address | Objectnummer |"))
-        self.assertIn("| 100 | NUM0001 | Address 100 |", markdown)
+        self.assertIn("| 100 | NUM0001 | 100 |", markdown)
 
 
     def test_extracts_next_line_value_layout(self):
@@ -77,9 +77,9 @@ Timing of max/min range check
 Z
 """
         block = parse_num_blocks(text)[0]
-        self.assertEqual("Address 300", block.address_line)
-        self.assertEqual("UnitScale X", block.unitscale_line)
-        self.assertEqual("Storage Type Y", block.storage_type_line)
+        self.assertEqual("300", block.address_line)
+        self.assertEqual("X", block.unitscale_line)
+        self.assertEqual("Y", block.storage_type_line)
 
     def test_extracts_realistic_num_block_layout(self):
         text = """Numeral Display & Input[NUM0010]
@@ -103,19 +103,19 @@ ON
 """
         block = parse_num_blocks(text)[0]
         self.assertEqual("NUM0010", block.object_number)
-        self.assertEqual("Address ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
-        self.assertEqual("Set UnitScale 1000", block.unitscale_line)
-        self.assertEqual("Storage Type REAL(Real Number 2 words)", block.storage_type_line)
-        self.assertEqual("Maximum Input Limit 10", block.max_input_limit_line)
-        self.assertEqual("Minimum Input Limit 0", block.min_input_limit_line)
+        self.assertEqual("ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
+        self.assertEqual("1000", block.unitscale_line)
+        self.assertEqual("REAL(Real Number 2 words)", block.storage_type_line)
+        self.assertEqual("10", block.max_input_limit_line)
+        self.assertEqual("0", block.min_input_limit_line)
 
 
     def test_debug_report_contains_extracted_values(self):
         blocks = parse_num_blocks(SAMPLE_TEXT)
         report = num_blocks_debug_report(blocks)
         self.assertIn("### Block 1: NUM0001", report)
-        self.assertIn("Address: Address 100", report)
-        self.assertIn("UnitScale: UnitScale A", report)
+        self.assertIn("Address: 100", report)
+        self.assertIn("UnitScale: A", report)
 
 
     def test_decode_file_normalizes_escaped_newlines(self):
@@ -125,7 +125,7 @@ ON
             text, source = decode_file(path)
             self.assertIn("escaped-newline-normalization", source)
             block = parse_num_blocks(text)[0]
-            self.assertEqual("Address 100", block.address_line)
+            self.assertEqual("100", block.address_line)
 
     def test_decode_file_rtf(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -135,7 +135,7 @@ ON
             self.assertTrue(source.startswith("rtf("))
             block = parse_num_blocks(text)[0]
             self.assertEqual("NUM0002", block.object_number)
-            self.assertEqual("Address ETHERNET:ABC", block.address_line)
+            self.assertEqual("ETHERNET:ABC", block.address_line)
 
 
     def test_prefers_general_address_over_other_sections(self):
@@ -153,7 +153,7 @@ Input Max/Min
 9
 """
         block = parse_num_blocks(text)[0]
-        self.assertEqual("Address ETHERNET:MAIN.VALUE", block.address_line)
+        self.assertEqual("ETHERNET:MAIN.VALUE", block.address_line)
 
 
     def test_pipe_delimited_rows_extract_correct_values(self):
@@ -169,11 +169,11 @@ Input Max/Min
    Minimum Input Limit|0|
 """
         block = parse_num_blocks(text)[0]
-        self.assertEqual("Address ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
-        self.assertEqual("Set UnitScale 1000", block.unitscale_line)
-        self.assertEqual("Storage Type REAL(Real Number 2 words)", block.storage_type_line)
-        self.assertEqual("Maximum Input Limit 10", block.max_input_limit_line)
-        self.assertEqual("Minimum Input Limit 0", block.min_input_limit_line)
+        self.assertEqual("ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
+        self.assertEqual("1000", block.unitscale_line)
+        self.assertEqual("REAL(Real Number 2 words)", block.storage_type_line)
+        self.assertEqual("10", block.max_input_limit_line)
+        self.assertEqual("0", block.min_input_limit_line)
 
 
 
