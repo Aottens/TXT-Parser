@@ -79,6 +79,35 @@ Z
         self.assertEqual("UnitScale X", block.unitscale_line)
         self.assertEqual("Storage Type Y", block.storage_type_line)
 
+    def test_extracts_realistic_num_block_layout(self):
+        text = """Numeral Display & Input[NUM0010]
+Storage Type
+REAL(Real Number 2 words)
+Set UnitScale
+1000
+Timing of max/min range check
+Check Value after Scale Conversion
+Address
+ETHERNET:VUA.IJ.Buffer_afstand
+Input Max/Min
+Specify Maximum Input Limit
+ON
+   Maximum Input Limit
+10
+Specify Minimum Input Limit
+ON
+   Minimum Input Limit
+0
+"""
+        block = parse_num_blocks(text)[0]
+        self.assertEqual("NUM0010", block.object_number)
+        self.assertEqual("Address ETHERNET:VUA.IJ.Buffer_afstand", block.address_line)
+        self.assertEqual("Set UnitScale 1000", block.unitscale_line)
+        self.assertEqual("Storage Type REAL(Real Number 2 words)", block.storage_type_line)
+        self.assertEqual("Maximum Input Limit 10", block.max_input_limit_line)
+        self.assertEqual("Minimum Input Limit 0", block.min_input_limit_line)
+
+
 
 if __name__ == "__main__":
     unittest.main()

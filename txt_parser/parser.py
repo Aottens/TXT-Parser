@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 DELIMITER = "Numeral Display & Input[NUM"
 OBJECT_NUMBER_RE = re.compile(r"^(\d{4})")
 FIELD_LABELS = {
-    "Address": "address_line",
-    "UnitScale": "unitscale_line",
-    "Storage Type": "storage_type_line",
-    "Minimum Input Limit": "min_input_limit_line",
-    "Maximum Input Limit": "max_input_limit_line",
-    "Timing of max/min range check": "timing_range_check_line",
+    "Address": ("address_line", ("Address",)),
+    "UnitScale": ("unitscale_line", ("UnitScale", "Set UnitScale")),
+    "Storage Type": ("storage_type_line", ("Storage Type",)),
+    "Minimum Input Limit": ("min_input_limit_line", ("Minimum Input Limit",)),
+    "Maximum Input Limit": ("max_input_limit_line", ("Maximum Input Limit",)),
+    "Timing of max/min range check": ("timing_range_check_line", ("Timing of max/min range check",)),
 }
 
 
@@ -44,27 +44,31 @@ def decode_file(path: str | Path) -> tuple[str, str]:
 
 
 def _line_matches_label(line: str, label: str) -> bool:
-    if line == label:
+    normalized_line = line.lstrip()
+    if normalized_line == label:
         return True
-    return line.startswith(f"{label} ") or line.startswith(f"{label}:")
+    return normalized_line.startswith(f"{label} ") or normalized_line.startswith(f"{label}:")
 
 
 def _extract_fields(block_text: str) -> dict[str, str]:
-    values: dict[str, str] = {attr_name: NOT_FOUND_IN_BLOCK for attr_name in FIELD_LABELS.values()}
+    values: dict[str, str] = {meta[0]: NOT_FOUND_IN_BLOCK for meta in FIELD_LABELS.values()}
     lines = [line.rstrip("\r") for line in block_text.split("\n")]
 
     for index, line in enumerate(lines):
-        for label, attr_name in FIELD_LABELS.items():
+        for _canonical_label, (attr_name, accepted_labels) in FIELD_LABELS.items():
             if values[attr_name] != NOT_FOUND_IN_BLOCK:
                 continue
-            if not _line_matches_label(line, label):
+
+            matched_label = next((label for label in accepted_labels if _line_matches_label(line, label)), None)
+            if matched_label is None:
                 continue
 
+            normalized_line = line.lstrip()
             # Preserve full original line where possible; support layout where value is on next line.
-            if line == label and index + 1 < len(lines) and lines[index + 1].strip():
-                values[attr_name] = f"{label} {lines[index + 1]}"
+            if normalized_line == matched_label and index + 1 < len(lines) and lines[index + 1].strip():
+                values[attr_name] = f"{matched_label} {lines[index + 1].strip()}"
             else:
-                values[attr_name] = line
+                values[attr_name] = normalized_line
 
     return values
 
