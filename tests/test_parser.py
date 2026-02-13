@@ -1,7 +1,7 @@
 import unittest
 
 from txt_parser.models import FOUND_OUTSIDE_NUM_BLOCK, NOT_FOUND_IN_BLOCK, NOT_FOUND_IN_FILE
-from txt_parser.parser import build_diagnostics, lookup_addresses, parse_num_blocks, rows_to_markdown
+from txt_parser.parser import build_diagnostics, lookup_addresses, num_blocks_debug_report, parse_num_blocks, rows_to_markdown
 
 
 SAMPLE_TEXT = """Header
@@ -106,6 +106,14 @@ ON
         self.assertEqual("Storage Type REAL(Real Number 2 words)", block.storage_type_line)
         self.assertEqual("Maximum Input Limit 10", block.max_input_limit_line)
         self.assertEqual("Minimum Input Limit 0", block.min_input_limit_line)
+
+
+    def test_debug_report_contains_extracted_values(self):
+        blocks = parse_num_blocks(SAMPLE_TEXT)
+        report = num_blocks_debug_report(blocks)
+        self.assertIn("### Block 1: NUM0001", report)
+        self.assertIn("Address: Address 100", report)
+        self.assertIn("UnitScale: UnitScale A", report)
 
 
 

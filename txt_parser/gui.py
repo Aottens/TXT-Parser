@@ -22,7 +22,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .parser import ParseDiagnostics, build_diagnostics, decode_file, lookup_addresses, parse_num_blocks, rows_to_markdown
+from .parser import (
+    ParseDiagnostics,
+    build_diagnostics,
+    decode_file,
+    lookup_addresses,
+    num_blocks_debug_report,
+    parse_num_blocks,
+    rows_to_markdown,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +66,7 @@ class NumParserWindow(QMainWindow):
         self._build_num_blocks_tab()
         self._build_lookup_tab()
         self._build_diagnostics_tab()
+        self._build_debug_tab()
 
         self.setCentralWidget(root)
         self._build_menu()
@@ -135,6 +144,29 @@ class NumParserWindow(QMainWindow):
         layout.addWidget(self.diagnostics_text)
         self.tabs.addTab(tab, "Diagnostics")
 
+
+    def _build_debug_tab(self) -> None:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        actions = QHBoxLayout()
+        generate_button = QPushButton("Generate debug report")
+        generate_button.clicked.connect(self.generate_debug_report)
+        copy_button = QPushButton("Copy debug report")
+        copy_button.clicked.connect(self.copy_debug_report)
+        save_button = QPushButton("Save debug report")
+        save_button.clicked.connect(self.save_debug_report)
+        actions.addWidget(generate_button)
+        actions.addWidget(copy_button)
+        actions.addWidget(save_button)
+
+        self.debug_text = QPlainTextEdit()
+        self.debug_text.setReadOnly(True)
+
+        layout.addLayout(actions)
+        layout.addWidget(self.debug_text)
+        self.tabs.addTab(tab, "Debug")
+
     def open_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Open TXT file", "", "Text Files (*.txt);;All Files (*)")
         if not path:
@@ -152,6 +184,7 @@ class NumParserWindow(QMainWindow):
         self.refresh_num_blocks_table()
         diagnostics = build_diagnostics(self.num_blocks)
         self.render_diagnostics(diagnostics)
+        self.generate_debug_report()
         self.statusBar().showMessage(f"Parsed {len(self.num_blocks)} blocks")
 
     def refresh_num_blocks_table(self) -> None:
@@ -216,6 +249,24 @@ class NumParserWindow(QMainWindow):
         if not path:
             return
         Path(path).write_text(markdown, encoding="utf-8")
+        self.statusBar().showMessage(f"Saved {Path(path).name}")
+
+
+    def generate_debug_report(self) -> None:
+        if not self.num_blocks:
+            self.debug_text.setPlainText("No parsed NUM blocks available.")
+            return
+        self.debug_text.setPlainText(num_blocks_debug_report(self.num_blocks))
+
+    def copy_debug_report(self) -> None:
+        QApplication.clipboard().setText(self.debug_text.toPlainText())
+        self.statusBar().showMessage("Debug report copied to clipboard")
+
+    def save_debug_report(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Save Debug Report", "num_debug_report.txt", "Text Files (*.txt)")
+        if not path:
+            return
+        Path(path).write_text(self.debug_text.toPlainText(), encoding="utf-8")
         self.statusBar().showMessage(f"Saved {Path(path).name}")
 
     def render_diagnostics(self, diagnostics: ParseDiagnostics) -> None:

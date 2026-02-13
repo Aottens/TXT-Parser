@@ -193,6 +193,23 @@ def lookup_addresses(
     return rows
 
 
+
+def num_blocks_debug_report(num_blocks: list[NumBlock]) -> str:
+    lines: list[str] = []
+    for index, block in enumerate(num_blocks, start=1):
+        lines.append(f"### Block {index}: {block.object_number}")
+        lines.append(f"Address: {block.address_line}")
+        lines.append(f"UnitScale: {block.unitscale_line}")
+        lines.append(f"Storage Type: {block.storage_type_line}")
+        lines.append(f"Minimum Input Limit: {block.min_input_limit_line}")
+        lines.append(f"Maximum Input Limit: {block.max_input_limit_line}")
+        lines.append(f"Timing of max/min range check: {block.timing_range_check_line}")
+        lines.append("Raw block:")
+        lines.append(block.raw_block_text)
+        lines.append("-" * 60)
+    return "\n".join(lines)
+
+
 def rows_to_markdown(rows: list[LookupRow]) -> str:
     headers = [
         "Gevraagd Address",
